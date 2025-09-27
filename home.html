@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Ronda de TI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 800px;
+            margin-top: 50px;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .card-header {
+            background-color: #007bff;
+            color: white;
+            text-align: center;
+        }
+        .btn-audio {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s;
+        }
+        .btn-audio:hover {
+            background-color: #c82333;
+        }
+        .btn-audio.active {
+            background-color: #28a745;
+        }
+        #transcription-status {
+            font-style: italic;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+            <h2>Ronda de TI - Setor Hospitalar</h2>
+        </div>
+        <div class="card-body">
+            <form action="#" method="POST">
+                
+                <div class="mb-3">
+                    <label for="setor" class="form-label">Setor:</label>
+                    <select class="form-select" id="setor" name="setor" required>
+                        <option selected disabled>Selecione o setor...</option>
+                        <option value="emergencia">Emergência</option>
+                        <option value="internacao">Internação</option>
+                        <option value="uti">UTI</option>
+                        <option value="laboratorio">Laboratório</option>
+                        <option value="administrativo">Administrativo</option>
+                        <option value="centro-cirurgico">Centro Cirúrgico</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="observacoes" class="form-label">Ocorrências/Observações:</label>
+                    <div class="input-group">
+                        <textarea class="form-control" id="observacoes" name="observacoes" rows="8"></textarea>
+                        <button class="btn btn-audio" type="button" id="record-btn" title="Gravar Áudio">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                    </div>
+                    <small id="transcription-status" class="form-text text-muted">Clique no microfone para começar a gravação.</small>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">Registrar Ronda</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // Verifica se a API de reconhecimento de fala está disponível no navegador
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    const recordBtn = document.getElementById('record-btn');
+    const observacoesTextarea = document.getElementById('observacoes');
+    const transcriptionStatus = document.getElementById('transcription-status');
+    let recognition;
+    let isRecording = false;
+
+    if (SpeechRecognition) {
+        // Inicializa o objeto de reconhecimento de fala
+        recognition = new SpeechRecognition();
+        recognition.lang = 'pt-BR'; // Define o idioma para português do Brasil
+        recognition.interimResults = true; // Define se deve retornar resultados provisórios
+        recognition.continuous = true; // Permite que a gravação continue sem interrupção
+
+        // Evento que é disparado quando o reconhecimento começa
+        recognition.onstart = function() {
+            transcriptionStatus.textContent = 'Gravando... fale agora. Clique novamente para parar.';
+            recordBtn.classList.add('active');
+            isRecording = true;
+        };
+
+        // Evento que lida com o resultado do reconhecimento
+        recognition.onresult = function(event) {
+            let final_transcript = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    final_transcript += event.results[i][0].transcript;
+                }
+            }
+
+            // Adiciona a transcrição final ao textarea
+            if (final_transcript.trim() !== '') {
+                if (observacoesTextarea.value.trim() !== '') {
+                    observacoesTextarea.value += '\n' + final_transcript;
+                } else {
+                    observacoesTextarea.value = final_transcript;
+                }
+            }
+        };
+
+        // Evento que é disparado quando o reconhecimento para
+        recognition.onend = function() {
+            transcriptionStatus.textContent = 'Transcrição finalizada.';
+            recordBtn.classList.remove('active');
+            isRecording = false;
+        };
+        
+        // Evento para lidar com erros
+        recognition.onerror = function(event) {
+            console.error('Erro no reconhecimento de fala:', event.error);
+            transcriptionStatus.textContent = 'Erro na gravação: ' + event.error;
+            recordBtn.classList.remove('active');
+            isRecording = false;
+        };
+
+        // Adiciona o evento de clique ao botão de gravação
+        recordBtn.addEventListener('click', () => {
+            if (isRecording) {
+                recognition.stop();
+            } else {
+                recognition.start();
+            }
+        });
+    } else {
+        // Mensagem de erro caso a API não seja suportada
+        transcriptionStatus.textContent = 'Seu navegador não suporta a API de Reconhecimento de Fala.';
+        recordBtn.disabled = true; // Desabilita o botão
+        recordBtn.classList.remove('btn-audio');
+        recordBtn.classList.add('btn-secondary');
+    }
+</script>
+
+</body>
+</html>
